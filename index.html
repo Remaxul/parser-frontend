@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Мой Парсер Сайта</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 20px;
+      background-color: #f9f9f9;
+    }
+    h1 {
+      color: #333;
+    }
+    button {
+      padding: 10px 20px;
+      margin: 5px;
+      background-color: #007bff;
+      color: white;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+    }
+    button:hover {
+      background-color: #0056b3;
+    }
+    .result {
+      margin-top: 20px;
+      padding: 15px;
+      border: 1px solid #ccc;
+      border-radius: 5px;
+      background-color: white;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+    }
+    .error {
+      color: red;
+    }
+    ul {
+      list-style: none;
+      padding: 0;
+    }
+    li {
+      padding: 5px 0;
+      border-bottom: 1px solid #eee;
+    }
+    .tracked-data {
+      margin-top: 10px;
+    }
+  </style>
+</head>
+<body>
+  <h1>Данные с сервера</h1>
+  <button onclick="fetchData('/mangalib')">Получить Mangalib</button>
+  <button onclick="fetchData('/shlib')">Получить Shlib</button>
+  <button onclick="fetchData('/tracked')">Получить Tracked</button>
+  <div id="result" class="result"></div>
+
+  <script>
+    const SERVER_URL = 'http://194.87.92.170:3000';
+
+    async function fetchData(endpoint) {
+      const resultDiv = document.getElementById('result');
+      resultDiv.innerHTML = 'Загрузка...';
+
+      try {
+        const response = await fetch(`${SERVER_URL}${endpoint}`, {
+          headers: {
+            "content-type": "application/json"
+          },
+          mode: "cors"
+        });
+
+        if (!response.ok) {
+          throw new Error(`HTTP error! Status: ${response.status}`);
+        }
+
+        const data = await response.json();
+
+        // Разный формат отображения в зависимости от endpoint
+        if (endpoint === '/tracked') {
+          displayTracked(data);
+        } else {
+          displayCollections(data, endpoint);
+        }
+      } catch (error) {
+        console.error('Ошибка:', error);
+        resultDiv.innerHTML = `<p class="error">Ошибка: ${error.message}</p>`;
+      }
+    }
+
+    function displayCollections(data, endpoint) {
+      const site = endpoint === '/mangalib' ? 'Mangalib' : 'Shlib';
+      const resultDiv = document.getElementById('result');
+      if (data.error) {
+        resultDiv.innerHTML = `<p class="error">Ошибка от сервера: ${data.error}</p>`;
+        return;
+      }
+      resultDiv.innerHTML = `
+        <h3>Коллекции с ${site}:</h3>
+        <ul>
+          ${data.map(collection => `
+            <li>ID: ${collection.id}, Название: ${collection.name}</li>
+          `).join('')}
+        </ul>
+      `;
+    }
+
+    function displayTracked(data) {
+      const resultDiv = document.getElementById('result');
+      if (data.error) {
+        resultDiv.innerHTML = `<p class="error">Ошибка от сервера: ${data.error}</p>`;
+        return;
+      }
+      resultDiv.innerHTML = `
+        <h3>Tracked IDs:</h3>
+        <div class="tracked-data">
+          <p><strong>Максимальный ID:</strong> ${data.maxId}</p>
+          <p><strong>Текущие ID (${data.ids.length}):</strong></p>
+          <ul>
+            ${data.ids.map(id => `<li>${id}</li>`).join('')}
+          </ul>
+        </div>
+      `;
+    }
+  </script>
+</body>
+</html>
